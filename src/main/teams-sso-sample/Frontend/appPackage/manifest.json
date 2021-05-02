@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.8/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.8",
+  "version": "1.0.0",
+  "id": "d8d1f14c-b523-42fb-95a1-f0de015cef4f",
+  "packageName": "com.microsoft.teams.extension",
+  "developer": {
+    "name": "Teams App, Inc.",
+    "websiteUrl": "https://1iveowl-server.eu.ngrok.io",
+    "privacyUrl": "https://1iveowl-server.eu.ngrok.io/privacy",
+    "termsOfUseUrl": "https://1iveowl-server.eu.ngrok.io/termsofuse"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "First SSO Tap",
+    "full": ""
+  },
+  "description": {
+    "short": "Short description for Channel Group Tab.",
+    "full": "Full description of Channel Group Tab."
+  },
+  "accentColor": "#FFFFFF",
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://1iveowl-server.eu.ngrok.io/config",
+      "canUpdateConfiguration": true,
+      "scopes": ["team", "groupchat"]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["1iveowl.eu.ngrok.io"],
+  "webApplicationInfo": {
+    "id": "477179e8-69df-4cd6-b230-865b110174ac",
+    "resource": "api://1iveowl-server.eu.ngrok.io/477179e8-69df-4cd6-b230-865b110174ac"
+  }
+}

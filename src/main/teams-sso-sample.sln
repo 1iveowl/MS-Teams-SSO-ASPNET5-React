@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "teams-sso-sample", "teams-sso-sample\teams-sso-sample.csproj", "{4D3F6343-D3B6-4182-A81D-83BFECF1B09F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "teams-sso-sample", "teams-sso-sample\teams-sso-sample.csproj", "{4D3F6343-D3B6-4182-A81D-83BFECF1B09F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{DF6852CB-B180-41B3-A0F2-0C5CE3BBA7D2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,6 +20,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4D3F6343-D3B6-4182-A81D-83BFECF1B09F} = {DF6852CB-B180-41B3-A0F2-0C5CE3BBA7D2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5BEDDD22-DD4B-45E3-9D41-106AD64862DD}
