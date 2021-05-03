@@ -31,7 +31,7 @@
     }
   ],
   "permissions": ["identity", "messageTeamMembers"],
-  "validDomains": ["1iveowl.eu.ngrok.io"],
+  "validDomains": ["1iveowl-server.eu.ngrok.io"],
   "webApplicationInfo": {
     "id": "477179e8-69df-4cd6-b230-865b110174ac",
     "resource": "api://1iveowl-server.eu.ngrok.io/477179e8-69df-4cd6-b230-865b110174ac"

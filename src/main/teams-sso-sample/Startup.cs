@@ -67,8 +67,9 @@ namespace teams_sso_sample
             }
 
                      
-            app.UseStaticFiles();
+            
             app.UseSpaStaticFiles();
+            app.UseStaticFiles();
 
             app.UseRouting();
 
@@ -87,7 +88,7 @@ namespace teams_sso_sample
 
                 if (env.IsDevelopment())
                 {
-                    spa.UseProxyToSpaDevelopmentServer("https://1iveowl-teams.eu.ngrok.io");
+                    spa.UseProxyToSpaDevelopmentServer("https://1iveowl-teams-react.eu.ngrok.io");
                     //spa.UseReactDevelopmentServer(npmScript: "start");
                 }
             });

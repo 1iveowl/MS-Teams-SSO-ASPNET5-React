@@ -20,6 +20,7 @@ interface ITabState {
   graphAccessToken: string;
   photo: string;
   error: boolean;
+  debugMessage: string;
 }
 class Tab extends React.Component<ITabProps, ITabState> {
   constructor(props: ITabProps) {
@@ -32,6 +33,7 @@ class Tab extends React.Component<ITabProps, ITabState> {
       graphAccessToken: '',
       photo: '',
       error: false,
+      debugMessage: 'bla',
     };
 
     //Bind any functions that need to be passed as callbacks or used to React components
@@ -81,7 +83,8 @@ class Tab extends React.Component<ITabProps, ITabState> {
   //Exchange the SSO access token for a Graph access token
   //Learn more: https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-on-behalf-of-flow
   exchangeClientTokenForServerToken = async (token: string) => {
-    let serverURL = `${process.env.REACT_APP_BASE_URL}/getGraphAccessToken?ssoToken=${token}`;
+    this.setState({ debugMessage: token });
+    let serverURL = `${process.env.REACT_APP_BASE_URL}/api/getGraphAccessToken?ssoToken=${token}`;
     console.log('here ' + serverURL);
     let response = await fetch(serverURL).catch(this.unhandledFetchError); //This calls getGraphAccessToken route in /api-server/app.js
     if (response) {
@@ -215,7 +218,8 @@ class Tab extends React.Component<ITabProps, ITabState> {
     if (this.state.error) {
       content = (
         <h1>
-          ERROR: Please ensure pop-ups are allowed for this website and retry
+          ERROR: Please ensure pop-ups are allowed for this website and retry:
+          {this.state.debugMessage}
         </h1>
       );
     } else {
