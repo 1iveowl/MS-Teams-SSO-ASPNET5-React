@@ -84,9 +84,17 @@ class Tab extends React.Component<ITabProps, ITabState> {
   //Learn more: https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-on-behalf-of-flow
   exchangeClientTokenForServerToken = async (token: string) => {
     this.setState({ debugMessage: token });
-    let serverURL = `${process.env.REACT_APP_BASE_URL}/api/getGraphAccessToken?ssoToken=${token}`;
+
+    let requestHeaders = new Headers();
+    requestHeaders.set('Authorization', 'Bearer ' + token);
+
+    let serverURL = `${process.env.REACT_APP_BASE_URL}/api/getGraphAccessToken`;
     console.log('here ' + serverURL);
-    let response = await fetch(serverURL).catch(this.unhandledFetchError); //This calls getGraphAccessToken route in /api-server/app.js
+
+    let response = await fetch(serverURL, { headers: requestHeaders }).catch(
+      this.unhandledFetchError,
+    ); //This calls getGraphAccessToken route in /api-server/app.js
+
     if (response) {
       let data = await response.json().catch(this.unhandledFetchError);
 

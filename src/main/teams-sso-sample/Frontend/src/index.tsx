@@ -10,10 +10,8 @@ import App from './components/App';
 import { Provider, teamsTheme } from '@fluentui/react-northstar'; //https://fluentsite.z22.web.core.windows.net/quick-start
 
 ReactDOM.render(
-  <React.StrictMode>
-    <Provider theme={teamsTheme}>
-      <App />
-    </Provider>
-  </React.StrictMode>,
+  <Provider theme={teamsTheme}>
+    <App />
+  </Provider>,
   document.getElementById('root'),
 );

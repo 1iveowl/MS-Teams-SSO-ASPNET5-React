@@ -1,22 +1,11 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.AspNetCore.SpaServices.Extensions;
-using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace teams_sso_sample
 {
@@ -32,8 +21,11 @@ namespace teams_sso_sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            //    .AddMicrosoftIdentityWebApp(Configuration.GetSection("AzureAd"));
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApi(Configuration)
+                    .EnableTokenAcquisitionToCallDownstreamApi()
+                        .AddDownstreamWebApi("MyApi", Configuration.GetSection("MSGraph"))
+                  .AddInMemoryTokenCaches();
 
             services.AddSpaStaticFiles(configuration =>
             {
@@ -66,22 +58,11 @@ namespace teams_sso_sample
                 app.UseHsts();
             }
 
-                     
-            
+            // Use Api controller pipeline if the path includes /api else use the React App pipeline.
+            app.Map("/api", app => HandleApi(app, env));
+
             app.UseSpaStaticFiles();
-            app.UseStaticFiles();
-
-            app.UseRouting();
-
-            // app.UseAuthentication();
-            // app.UseAuthorization();
-
-            app.UseEndpoints(endpoints =>
-            {
-                // endpoints.MapRazorPages();
-                endpoints.MapControllers();
-            });
-
+            
             app.UseSpa(spa =>
             {
                 spa.Options.SourcePath = "Frontend";
@@ -91,6 +72,20 @@ namespace teams_sso_sample
                     spa.UseProxyToSpaDevelopmentServer("https://1iveowl-teams-react.eu.ngrok.io");
                     //spa.UseReactDevelopmentServer(npmScript: "start");
                 }
+            });
+
+        }
+        private void HandleApi(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            app.UseAuthentication();
+            
+            app.UseRouting();
+
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
             });
         }
     }
