@@ -24,7 +24,7 @@ namespace teams_sso_sample
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddMicrosoftIdentityWebApi(Configuration)
                     .EnableTokenAcquisitionToCallDownstreamApi()
-                        .AddDownstreamWebApi("MyApi", Configuration.GetSection("MSGraph"))
+                        .AddDownstreamWebApi("MSGraphAPI", Configuration.GetSection("MSGraph"))
                   .AddInMemoryTokenCaches();
 
             services.AddSpaStaticFiles(configuration =>
