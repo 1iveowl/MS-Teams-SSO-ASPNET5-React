@@ -30,21 +30,16 @@ namespace teams_sso_sample.Controllers
 
         [Route("[controller]")]
         [Authorize]        
-        //[RequiredScope(RequiredScopesConfigurationKey = "AzureAd:Scopes")]
+        [RequiredScope(new string[] { "access_as_user" })]
         public async Task<IActionResult> OnGet()
         {
-            HttpContext.VerifyUserHasAnyAcceptedScope(_scopeRequiredByAPI);
+            // HttpContext.VerifyUserHasAnyAcceptedScope(new string[] { "access_as_user" }));
 
             try
             {
-                string accessToken = await _tokenAcquisition.GetAccessTokenForUserAsync(_scopes);
+                string accessToken = await _tokenAcquisition.GetAccessTokenForUserAsync(new string[] { ".default" });
                 return new JsonResult(new { access_token = accessToken });
-                // call the downstream API with the bearer token in the Authorize header
             }
-            //catch (MsalUiRequiredException ex)
-            //{
-            //    _tokenAcquisition.ReplyForbiddenWithWwwAuthenticateHeader(HttpContext, scopes, ex);
-            //}
 
             //try
             //{
