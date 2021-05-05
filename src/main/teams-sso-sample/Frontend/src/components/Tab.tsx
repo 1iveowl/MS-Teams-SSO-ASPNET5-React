@@ -5,6 +5,7 @@ import React from 'react';
 import './App.css';
 import * as microsoftTeams from '@microsoft/teams-js';
 import { Avatar, Loader } from '@fluentui/react-northstar';
+import crypto from 'crypto';
 
 /**
  * This tab component renders the main tab content
@@ -18,9 +19,9 @@ interface ITabState {
   consentRequired: boolean;
   consentProvided: boolean;
   graphAccessToken: string;
+  idToken: string;
   photo: string;
   error: boolean;
-  debugMessage: string;
 }
 class Tab extends React.Component<ITabProps, ITabState> {
   constructor(props: ITabProps) {
@@ -31,9 +32,9 @@ class Tab extends React.Component<ITabProps, ITabState> {
       consentRequired: false,
       consentProvided: false,
       graphAccessToken: '',
+      idToken: '',
       photo: '',
       error: false,
-      debugMessage: 'bla',
     };
 
     //Bind any functions that need to be passed as callbacks or used to React components
@@ -66,13 +67,13 @@ class Tab extends React.Component<ITabProps, ITabState> {
         this.ssoLoginFailure(error);
       },
     };
-
     microsoftTeams.authentication.getAuthToken(authTokenRequestOptions);
   }
 
   ssoLoginSuccess = async (result: string) => {
     this.setState({ ssoToken: result });
-    this.exchangeClientTokenForServerToken(result);
+    await this.exchangeClientTokenForServerToken(result);
+    await this.getIdToken();
   };
 
   ssoLoginFailure(error: string) {
@@ -83,8 +84,6 @@ class Tab extends React.Component<ITabProps, ITabState> {
   //Exchange the SSO access token for a Graph access token
   //Learn more: https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-on-behalf-of-flow
   exchangeClientTokenForServerToken = async (token: string) => {
-    this.setState({ debugMessage: token });
-
     let requestHeaders = new Headers();
     requestHeaders.set('Authorization', 'Bearer ' + token);
 
@@ -141,6 +140,59 @@ class Tab extends React.Component<ITabProps, ITabState> {
 
   consentFailure(reason: string) {
     console.error('Consent failed: ', reason);
+    this.setState({ error: true });
+  }
+
+  getIdToken = async () => {
+    this.showIdTokenDialog();
+    // microsoftTeams.getContext(async (context: microsoftTeams.Context) => {
+    //   let tenant = context['tid']; //Tenant ID of the logged in user
+    //   let client_id = process.env.REACT_APP_AZURE_APP_REGISTRATION_ID; //Client ID of the Azure AD app registration ( may be from different tenant for multitenant apps)
+    //   let queryParams: any = {
+    //     tenant: tenant,
+    //     client_id: client_id,
+    //     response_type: 'id_token',
+    //     scope: 'openid',
+    //     redirect_uri: window.location.origin + '/id-token-end',
+    //     nonce: crypto.randomBytes(16).toString('base64'),
+    //     state: crypto.randomBytes(8).toString('base64'),
+    //   };
+
+    //   let url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?`;
+    //   queryParams = new URLSearchParams(queryParams).toString();
+
+    //   let idTokenEndpoint = url + queryParams;
+
+    //   window.location.assign(idTokenEndpoint);
+    // });
+  };
+
+  // Show a popup dialogue prompting the user to consent to the required API permissions. This opens ConsentPopup.js.
+  // Learn more: https://docs.microsoft.com/en-us/microsoftteams/platform/tabs/how-to/authentication/auth-tab-aad#initiate-authentication-flow
+  showIdTokenDialog() {
+    microsoftTeams.authentication.authenticate({
+      url: window.location.origin + '/id-token-start',
+      width: 600,
+      height: 535,
+      successCallback: (result) => {
+        this.idTokenSuccess(result ?? '');
+      },
+      failureCallback: (reason) => {
+        this.idTokenFailure(reason ?? '');
+      },
+    });
+  }
+
+  //Callback function for a successful authorization
+  idTokenSuccess(result: string) {
+    //Save the Graph access token in state
+    this.setState({
+      idToken: result,
+    });
+  }
+
+  idTokenFailure(reason: string) {
+    console.error('Get id token failed: ', reason);
     this.setState({ error: true });
   }
 
@@ -226,8 +278,7 @@ class Tab extends React.Component<ITabProps, ITabState> {
     if (this.state.error) {
       content = (
         <h1>
-          ERROR: Please ensure pop-ups are allowed for this website and retry:
-          {this.state.debugMessage}
+          ERROR: Please ensure pop-ups are allowed for this website and retry
         </h1>
       );
     } else {

@@ -12,6 +12,8 @@ import Tab from './Tab';
 import ConsentPopup from './ConsentPopup';
 import ClosePopup from './ClosePopup';
 import TabConfig from './TabConfig';
+import IdTokenPopup from './IdTokenPopup';
+import CloseIdTokenPopup from './CloseIdTokenPopup';
 
 /**
  * The main app which handles the initialization and routing
@@ -30,6 +32,8 @@ function App() {
       <Route exact path="/config" component={TabConfig} />
       <Route exact path="/auth-start" component={ConsentPopup} />
       <Route exact path="/auth-end" component={ClosePopup} />
+      <Route exact path="/id-token-start" component={IdTokenPopup} />
+      <Route exact path="/id-token-end" component={CloseIdTokenPopup} />
     </Router>
   );
 }

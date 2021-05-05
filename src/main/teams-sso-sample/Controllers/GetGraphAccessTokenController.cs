@@ -17,8 +17,7 @@ namespace teams_sso_sample.Controllers
         private readonly ITokenAcquisition _tokenAcquisition;
 
         static readonly string[] _scopeRequiredByAPI = new string[] { "access_as_user" };
-
-        static readonly string[] _scopes = new string[] { "User.Read profile email offline_access openid" };
+        static readonly string[] _scopesForGraph = new string[] { "User.Read profile email offline_access openid" };
 
         public GetGraphAccessTokenController(
             IDownstreamWebApi downstreamWebApi,
@@ -37,7 +36,8 @@ namespace teams_sso_sample.Controllers
 
             try
             {
-                string accessToken = await _tokenAcquisition.GetAccessTokenForUserAsync(new string[] { ".default" });
+                string accessToken = await _tokenAcquisition.GetAccessTokenForUserAsync(new string[] { ".default" });               
+
                 return new JsonResult(new { access_token = accessToken });
             }
 

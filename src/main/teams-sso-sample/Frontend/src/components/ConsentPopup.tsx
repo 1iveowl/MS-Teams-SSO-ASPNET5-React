@@ -24,12 +24,13 @@ class ConsentPopup extends React.Component {
       let queryParams: any = {
         tenant: `${tenant}`,
         client_id: `${client_id}`,
-        response_type: 'token', //token_id in other samples is only needed if using open ID
+        response_type: 'token',
         prompt: 'consent', // https://docs.microsoft.com/en-us/microsoftteams/platform/tabs/how-to/authentication/auth-aad-sso#ask-for-additional-consent-using-the-auth-api
-        scope: '.default', // .default dets all the scopes (permissions) defined for the app registration - https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#the-default-scope
+        scope: '.default', // .default sets all the scopes (permissions) defined for the app registration - https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#the-default-scope
         //scope: 'https://graph.microsoft.com/User.Read',
         redirect_uri: window.location.origin + '/auth-end',
         nonce: crypto.randomBytes(16).toString('base64'),
+        state: crypto.randomBytes(8).toString('base64'),
       };
 
       let url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?`;
