@@ -25,7 +25,9 @@ class ConsentPopup extends React.Component {
         tenant: `${tenant}`,
         client_id: `${client_id}`,
         response_type: 'token', //token_id in other samples is only needed if using open ID
-        scope: 'https://graph.microsoft.com/User.Read',
+        prompt: 'consent', // https://docs.microsoft.com/en-us/microsoftteams/platform/tabs/how-to/authentication/auth-aad-sso#ask-for-additional-consent-using-the-auth-api
+        scope: '.default', // .default dets all the scopes (permissions) defined for the app registration.
+        //scope: 'https://graph.microsoft.com/User.Read',
         redirect_uri: window.location.origin + '/auth-end',
         nonce: crypto.randomBytes(16).toString('base64'),
       };
