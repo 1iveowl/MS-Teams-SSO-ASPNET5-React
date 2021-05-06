@@ -2,10 +2,12 @@
 // Licensed under the MIT License.
 
 import React from 'react';
+import * as msal from '@azure/msal-browser';
+import AuthenticationContext from 'adal-angular';
 import './App.css';
 import * as microsoftTeams from '@microsoft/teams-js';
 import { Avatar, Loader } from '@fluentui/react-northstar';
-import crypto from 'crypto';
+// import crypto from 'crypto';
 
 /**
  * This tab component renders the main tab content
@@ -19,6 +21,8 @@ interface ITabState {
   consentRequired: boolean;
   consentProvided: boolean;
   graphAccessToken: string;
+  adalAuthContext: AuthenticationContext | undefined;
+  clientId: string;
   idToken: string;
   photo: string;
   error: boolean;
@@ -33,6 +37,8 @@ class Tab extends React.Component<ITabProps, ITabState> {
       consentProvided: false,
       graphAccessToken: '',
       idToken: '',
+      adalAuthContext: undefined,
+      clientId: '',
       photo: '',
       error: false,
     };
@@ -56,10 +62,49 @@ class Tab extends React.Component<ITabProps, ITabState> {
     // Get the user context from Teams and set it in the state
     microsoftTeams.getContext((context: microsoftTeams.Context) => {
       this.setState({ context: context });
+
+      const client_id = process.env.REACT_APP_AZURE_APP_REGISTRATION_ID; //Client ID of the Azure AD app registration ( may be from different tenant for multitenant apps)
+      this.setState({ clientId: client_id as string });
+
+      let config = {
+        clientId: client_id as string,
+        redirectUri: (window.location.origin + '/id-token-end') as string, // redirectUri must be in the list of redirect URLs for the Azure AD app
+        cacheLocation: 'sessionStorage',
+        navigateToLoginRequestUrl: false as boolean,
+      } as AuthenticationContext.Options;
+
+      if (context.loginHint) {
+        config.extraQueryParameter =
+          'scope=openid' +
+          '&tenant=' +
+          context.tid +
+          '&login_hint=' +
+          encodeURIComponent(context.loginHint);
+      } else {
+        config.extraQueryParameter = 'scope=openid' + '&tenant=' + context.tid;
+      }
+
+      // if (context.loginHint) {
+      //   config.extraQueryParameter =
+      //     'scope=openid' +
+      //     '&tenant=' +
+      //     context.tid +
+      //     '&response_type=id_token' +
+      //     '&response_mode=fragment';
+      // } else {
+      //   config.extraQueryParameter =
+      //     'scope=openid&response_type=id_token&response_mode=fragment' +
+      //     '&tenant=' +
+      //     context.tid;
+      // }
+
+      var authContext = new AuthenticationContext(config);
+
+      this.setState({ adalAuthContext: authContext });
     });
 
     //Perform Azure AD single sign-on authentication
-    let authTokenRequestOptions = {
+    let authTokenRequestOptions: microsoftTeams.authentication.AuthTokenRequest = {
       successCallback: (result: string) => {
         this.ssoLoginSuccess(result);
       }, //The result variable is the SSO token.
@@ -67,13 +112,42 @@ class Tab extends React.Component<ITabProps, ITabState> {
         this.ssoLoginFailure(error);
       },
     };
+
     microsoftTeams.authentication.getAuthToken(authTokenRequestOptions);
   }
 
   ssoLoginSuccess = async (result: string) => {
     this.setState({ ssoToken: result });
+
+    if (this.state.adalAuthContext) {
+      const authContext = this.state.adalAuthContext;
+      let user = authContext.getCachedUser();
+      if (user) {
+        if (user?.profile?.oid === undefined) {
+          // User doesn't match, clear the cache
+          authContext.clearCache();
+        }
+      }
+
+      authContext.acquireToken(
+        this.state.clientId,
+        (errorDesc, token, error) => {
+          if (!token) {
+            console.log('Renewal failed: ' + error);
+          }
+        },
+      );
+    }
+
+    // In this example we are getting an id token (which ADAL.js returns if we ask for resource = clientId)
+    //   authContext.acquireToken(
+    //     this.state.context.clientId,
+    //     acquireTokenCallBack
+    //   );
+    // }
+
     await this.exchangeClientTokenForServerToken(result);
-    await this.getIdToken();
+    // await this.getIdToken();
   };
 
   ssoLoginFailure(error: string) {
@@ -144,27 +218,118 @@ class Tab extends React.Component<ITabProps, ITabState> {
   }
 
   getIdToken = async () => {
-    this.showIdTokenDialog();
-    // microsoftTeams.getContext(async (context: microsoftTeams.Context) => {
-    //   let tenant = context['tid']; //Tenant ID of the logged in user
-    //   let client_id = process.env.REACT_APP_AZURE_APP_REGISTRATION_ID; //Client ID of the Azure AD app registration ( may be from different tenant for multitenant apps)
-    //   let queryParams: any = {
-    //     tenant: tenant,
-    //     client_id: client_id,
-    //     response_type: 'id_token',
-    //     scope: 'openid',
-    //     redirect_uri: window.location.origin + '/id-token-end',
-    //     nonce: crypto.randomBytes(16).toString('base64'),
-    //     state: crypto.randomBytes(8).toString('base64'),
-    //   };
+    //this.showIdTokenDialog();
 
-    //   let url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?`;
-    //   queryParams = new URLSearchParams(queryParams).toString();
+    microsoftTeams.getContext(async (context: microsoftTeams.Context) => {
+      const client_id = process.env.REACT_APP_AZURE_APP_REGISTRATION_ID; //Client ID of the Azure AD app registration ( may be from different tenant for multitenant apps)
+      const tenant = context['tid']; //Tenant ID of the logged in user
+      let authority = `https://login.microsoftonline.com/${tenant}`;
 
-    //   let idTokenEndpoint = url + queryParams;
+      // Configure ADAL localstorage
+      // let config = {
+      //   clientId: 'g075edef-0efa-453b-997b-de1337c29185' as string,
+      //   //redirectUri: window.location.origin + "/SilentAuthEnd",       // This should be in the list of redirect uris for the AAD app
+      //   cacheLocation: 'localStorage' as CacheLocation,
+      //   navigateToLoginRequestUrl: false,
+      // };
+      // let authContext = new AuthenticationContext(config);
 
-    //   window.location.assign(idTokenEndpoint);
-    // });
+      // var cfg: msal.Configuration = {
+      //   auth: {
+      //     clientId: client_id as string,
+      //     authority: authority as string,
+      //   },
+      //   // cache: {
+      //   //   cacheLocation: 'localStorage' as CacheLocation,
+      //   // },
+      // };
+
+      // Configure MSAL localstorage
+      const msalConfig = {
+        auth: {
+          clientId: client_id as string,
+          authority: authority as string,
+        },
+        cache: {
+          cacheLocation: 'localStorage',
+        },
+      };
+
+      const ua = window.navigator.userAgent;
+      const msie = ua.indexOf('MSIE ');
+      const msie11 = ua.indexOf('Trident/');
+      const msedge = ua.indexOf('Edge/');
+      const isIE = msie > 0 || msie11 > 0;
+      const isEdge = msedge > 0;
+
+      const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+      // const sid = context.sessionId;
+
+      var request = {
+        scopes: ['user.read'],
+        loginHint: context.loginHint as string,
+        // extraQueryParameters: { domain_hint: 'organizations' as string },
+
+        //sid: context.sessionId,
+      };
+
+      var currentAccount = msalInstance.getAccountByUsername(
+        context.loginHint as string,
+      );
+
+      await msalInstance
+        .acquireTokenSilent(request)
+        .then((response) => {
+          const token = response.idToken;
+        })
+        .catch((error) => {
+          const e = error;
+        });
+
+      // userAgentApplication
+      //   .acquireTokenSilent(request)
+      //   .then((response) => {
+      //     const token = response.idToken;
+      //   })
+      //   .catch((error) => {
+      //     const e = error;
+      //   });
+
+      // let tenant = context['tid']; //Tenant ID of the logged in user
+      // let client_id = process.env.REACT_APP_AZURE_APP_REGISTRATION_ID; //Client ID of the Azure AD app registration ( may be from different tenant for multitenant apps)
+      // let queryParams: any = {
+      //   tenant: tenant,
+      //   client_id: client_id,
+      //   response_type: 'id_token',
+      //   scope: 'openid',
+      //   redirect_uri: window.location.origin + '/id-token-end',
+      //   nonce: crypto.randomBytes(16).toString('base64'),
+      //   state: crypto.randomBytes(8).toString('base64'),
+      // };
+
+      // let url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?`;
+      // queryParams = new URLSearchParams(queryParams).toString();
+
+      // let idTokenEndpoint = url + queryParams;
+
+      // let response = await fetch(idTokenEndpoint, {
+      //   method: 'GET',
+      // })
+      //   .then((response) => {
+      //     if (response.redirected) {
+      //       window.location.assign(response.url);
+      //     }
+      //   })
+      //   .catch(this.unhandledFetchError);
+
+      // if (response) {
+      //   let data = await response.json().catch(this.unhandledFetchError);
+      //   let idToken = data['id_token'];
+      // }
+
+      // window.location.assign(idTokenEndpoint);
+    });
   };
 
   // Show a popup dialogue prompting the user to consent to the required API permissions. This opens ConsentPopup.js.
