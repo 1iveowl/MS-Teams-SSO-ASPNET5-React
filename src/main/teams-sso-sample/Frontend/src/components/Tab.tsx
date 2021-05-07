@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import React from 'react';
-import * as msal from '@azure/msal-browser';
+//import * as msal from '@azure/msal-browser';
 import AuthenticationContext from 'adal-angular';
 import './App.css';
 import * as microsoftTeams from '@microsoft/teams-js';
@@ -245,47 +245,40 @@ class Tab extends React.Component<ITabProps, ITabState> {
       // };
 
       // Configure MSAL localstorage
-      const msalConfig = {
-        auth: {
-          clientId: client_id as string,
-          authority: authority as string,
-        },
-        cache: {
-          cacheLocation: 'localStorage',
-        },
-      };
+      // const msalConfig = {
+      //   auth: {
+      //     clientId: client_id as string,
+      //     authority: authority as string,
+      //   },
+      //   cache: {
+      //     cacheLocation: 'localStorage',
+      //   },
+      // };
 
-      const ua = window.navigator.userAgent;
-      const msie = ua.indexOf('MSIE ');
-      const msie11 = ua.indexOf('Trident/');
-      const msedge = ua.indexOf('Edge/');
-      const isIE = msie > 0 || msie11 > 0;
-      const isEdge = msedge > 0;
-
-      const msalInstance = new msal.PublicClientApplication(msalConfig);
+      // const msalInstance = new msal.PublicClientApplication(msalConfig);
 
       // const sid = context.sessionId;
 
-      var request = {
-        scopes: ['user.read'],
-        loginHint: context.loginHint as string,
-        // extraQueryParameters: { domain_hint: 'organizations' as string },
+      // var request = {
+      //   scopes: ['user.read'],
+      //   loginHint: context.loginHint as string,
+      // extraQueryParameters: { domain_hint: 'organizations' as string },
 
-        //sid: context.sessionId,
-      };
+      //sid: context.sessionId,
+      //};
 
-      var currentAccount = msalInstance.getAccountByUsername(
-        context.loginHint as string,
-      );
+      // var currentAccount = msalInstance.getAccountByUsername(
+      //   context.loginHint as string,
+      //);
 
-      await msalInstance
-        .acquireTokenSilent(request)
-        .then((response) => {
-          const token = response.idToken;
-        })
-        .catch((error) => {
-          const e = error;
-        });
+      // await msalInstance
+      //   .acquireTokenSilent(request)
+      //   .then((response) => {
+      //     const token = response.idToken;
+      //   })
+      //   .catch((error) => {
+      //     const e = error;
+      //   });
 
       // userAgentApplication
       //   .acquireTokenSilent(request)
