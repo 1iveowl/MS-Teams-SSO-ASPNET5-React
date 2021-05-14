@@ -4,8 +4,15 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
+using Microsoft.OpenApi.Models;
+using System;
+using System.Linq;
+using System.Net.Http.Headers;
+using teams_sso_sample.Client;
+using teams_sso_sample.Options;
 
 namespace teams_sso_sample
 {
@@ -21,11 +28,27 @@ namespace teams_sso_sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Using Options: https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options?view=aspnetcore-5.0
+            services.Configure<ApiAppOptions>(Configuration.GetSection(ApiAppOptions.ApiAppRegistration));
+            services.Configure<MSGraphOptions>(Configuration.GetSection(MSGraphOptions.MSGraphSettings));           
+
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApi(Configuration)
-                    .EnableTokenAcquisitionToCallDownstreamApi()
-                        .AddDownstreamWebApi("MSGraphAPI", Configuration.GetSection("MSGraph"))
+                .AddMicrosoftIdentityWebApi(Configuration, ApiAppOptions.ApiAppRegistration)
+                .EnableTokenAcquisitionToCallDownstreamApi()
+                  .AddDownstreamWebApi("MSGraphAPI", Configuration.GetSection(MSGraphOptions.MSGraphSettings))
                   .AddInMemoryTokenCaches();
+
+            services.AddHttpClient<IGraphApiClientFactory, GraphApiClientFactory>()
+                .ConfigureHttpClient((serviceprovider, httpClient) =>
+                {
+                    var scope = serviceprovider.CreateScope();
+
+                    var baseUrl = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<MSGraphOptions>>().Value.BaseUrl;
+
+                    httpClient.BaseAddress = new Uri(baseUrl);
+
+                    scope.Dispose();
+                });
 
             services.AddSpaStaticFiles(configuration =>
             {
@@ -41,6 +64,7 @@ namespace teams_sso_sample
             services.AddRazorPages()
                 .AddMvcOptions(options => { })
                 .AddMicrosoftIdentityUI();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
