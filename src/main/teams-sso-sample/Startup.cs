@@ -9,8 +9,6 @@ using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using Microsoft.OpenApi.Models;
 using System;
-using System.Linq;
-using System.Net.Http.Headers;
 using teams_sso_sample.Client;
 using teams_sso_sample.Options;
 
@@ -50,10 +48,15 @@ namespace teams_sso_sample
                     scope.Dispose();
                 });
 
+            services.AddScoped<IGraphRequestHandler, GraphRequestHandler>();
+
+
+            // For serving SPA TypeScript client.
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "Frontend/Build";
             });
+
 
             services.AddAuthorization(options =>
             {

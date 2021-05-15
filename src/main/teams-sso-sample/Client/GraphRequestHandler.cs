@@ -1,25 +1,73 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Microsoft.Graph;
+using Microsoft.Identity.Web;
+using System;
+using System.IO;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using teams_sso_sample.Options;
 
 namespace teams_sso_sample.Client
 {
-    public class GraphRequestHandler
+    public class GraphRequestHandler : IGraphRequestHandler
     {
+        private readonly ITokenAcquisition _tokenAcquisition;
         private readonly IGraphApiClientFactory _graphApiClientFactory;
+        private readonly IOptionsSnapshot<MSGraphOptions> _graphOptions;
 
-        public GraphRequestHandler(IGraphApiClientFactory graphApiClientFactory)
+        public GraphRequestHandler(
+            ITokenAcquisition tokenAcquisition,
+            IGraphApiClientFactory graphApiClientFactory,
+            IOptionsSnapshot<MSGraphOptions> graphOptions)
         {
+            _tokenAcquisition = tokenAcquisition;
             _graphApiClientFactory = graphApiClientFactory;
-
+            _graphOptions = graphOptions;
         }
 
-        //public async Task<object> SendRequest(string s)
-        //{
-        //    var graphClient = await _graphApiClientFactory.Create();
+        public async Task<IActionResult> CheckConsent() =>
+            await SendRequest(
+                GetAccessTokenForUser,
+                accessToken => new OkResult());
 
+        public async Task<IActionResult> GetAccessToken() =>
+                await SendRequest(
+                    GetAccessTokenForUser,
+                    accessToken => new JsonResult(new { data = accessToken }) { StatusCode = 200 });
 
-        //}
+        public async Task<IActionResult> SendGraphImageRequest(Func<GraphServiceClient, Task<Stream>> graphFunc) =>
+                await SendRequest(async () =>
+                    await graphFunc(await _graphApiClientFactory.Create(new MediaTypeWithQualityHeaderValue("image/jpg"))),
+                    stream => new FileStreamResult(stream, "image/jpg"));
+
+        public async Task<IActionResult> SendGraphRequest<T>(Func<GraphServiceClient, Task<T>> graphFunc) =>
+                await SendRequest(async () =>
+                    await graphFunc(await _graphApiClientFactory.Create()));
+
+        private async Task<string> GetAccessTokenForUser() =>
+            await _tokenAcquisition.GetAccessTokenForUserAsync(_graphOptions.Value.Scopes.Split(' '));
+
+        private static async Task<IActionResult> SendRequest<T>(
+            Func<Task<T>> sendFunc,
+            Func<T, IActionResult> returnFunc = null)
+        {
+            try
+            {
+                var result = await sendFunc().ConfigureAwait(false);
+
+                return returnFunc is null
+                    ? new JsonResult(result)
+                    : returnFunc(result);
+            }
+            catch (ServiceException serviceException)
+            {
+                return new JsonResult(new { error = $"{serviceException.Message}" }) { StatusCode = 500 };
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { error = $"{ex.Message}" }) { StatusCode = 500 };
+            }
+        }
     }
 }
