@@ -82,7 +82,10 @@ class Tab extends React.Component<ITabProps, ITabState> {
     this.setState({ ssoToken: authToken });
 
     //await this.exchangeClientTokenForServerToken(authToken);
-    await this.callApiEndpointWithConsentCheck(authToken, 'checkConsent');
+    await this.callApiEndpointWithConsentCheck(
+      authToken,
+      'exchangeAccessToken',
+    );
     // await this.getIdToken();
   };
 

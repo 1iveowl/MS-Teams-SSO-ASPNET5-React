@@ -9,11 +9,11 @@ namespace teams_sso_sample.Controllers
     [ApiController]
     [Authorize]
     [RequiredScope(new string[] { "access_as_user" })]
-    public class GraphController : ControllerBase
+    public class GraphUserDelegatedController : ControllerBase
     {
         private readonly IGraphRequestHandler _graphRequestHandler;
 
-        public GraphController(
+        public GraphUserDelegatedController(
             IGraphRequestHandler graphRequestHandler)
         {
             _graphRequestHandler = graphRequestHandler;
@@ -21,7 +21,6 @@ namespace teams_sso_sample.Controllers
 
         [Route("checkConsent")]
         public async Task<IActionResult> OnCheckConsent() => await _graphRequestHandler.CheckConsent();
-
 
         [Route("exchangeAccessToken")]
         public async Task<IActionResult> OnGetAccessToken() => await _graphRequestHandler.GetAccessToken();

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
+using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
 using System;
 using System.IO;
@@ -54,15 +55,20 @@ namespace teams_sso_sample.Client
         {
             try
             {
-                var result = await sendFunc().ConfigureAwait(false);
+                var response = await sendFunc().ConfigureAwait(false);
 
                 return returnFunc is null
-                    ? new JsonResult(result)
-                    : returnFunc(result);
+                    ? new JsonResult(response)
+                    : returnFunc(response);
             }
-            catch (ServiceException serviceException)
+            catch (MicrosoftIdentityWebChallengeUserException ex) 
+            when (ex.MsalUiRequiredException.Classification == UiRequiredExceptionClassification.ConsentRequired)
             {
-                return new JsonResult(new { error = $"{serviceException.Message}" }) { StatusCode = 500 };
+                return new JsonResult(new { error = "consent_required" }) { StatusCode = 403 };
+            }
+            catch (ServiceException ex)
+            {
+                return new JsonResult(new { error = $"{ex.Message}" }) { StatusCode = 500 };
             }
             catch (Exception ex)
             {
