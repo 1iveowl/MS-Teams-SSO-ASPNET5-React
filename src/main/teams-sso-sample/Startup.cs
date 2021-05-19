@@ -31,7 +31,8 @@ namespace teams_sso_sample
             services.Configure<MSGraphOptions>(Configuration.GetSection(MSGraphOptions.MSGraphSettings));
             services.Configure<ThrottlingOptions>(Configuration.GetSection(ThrottlingOptions.ThrottelingSettings));
 
-            var registry = services.AddPollyPolicyRegistry(Configuration);
+            var registry = services
+                .AddPollyPolicyRegistry(Configuration.GetSection(ThrottlingOptions.ThrottelingSettings).Get<ThrottlingOptions>());
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddMicrosoftIdentityWebApi(Configuration, ApiAppOptions.ApiAppRegistration)
@@ -45,9 +46,9 @@ namespace teams_sso_sample
                     using var scope = serviceprovider.CreateScope();
                     var baseUrl = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<MSGraphOptions>>().Value.BaseUrl;
                     httpClient.BaseAddress = new Uri(baseUrl);
-                    
-                })
-                .AddPolicyHandlerFromRegistry(PolicyRepository.Selector);
+
+                });
+                //.AddPolicyHandlerFromRegistry(PolicyRepository.Selector);
 
             services.AddScoped<IGraphRequestHandler, GraphRequestHandler>();
 

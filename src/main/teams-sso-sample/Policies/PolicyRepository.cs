@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using Polly.Registry;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using teams_sso_sample.Options;
@@ -11,20 +12,20 @@ namespace teams_sso_sample.Policies
 {
     public static class PolicyRepository
     {
-        public static IReadOnlyPolicyRegistry<string> AddPollyPolicyRegistry(this IServiceCollection services, IConfiguration configuration)
+        public static IReadOnlyPolicyRegistry<string> AddPollyPolicyRegistry(
+            this IServiceCollection services, 
+            ThrottlingOptions throttelingSettings)
         {
             var registry = services.AddPolicyRegistry();
-
-            var throttelingSettings = configuration.GetSection(ThrottlingOptions.ThrottelingSettings).Get<ThrottlingOptions>();            
-
+                        
             registry.Add(
                 nameof(PolicyName.TeamsBulkheadIsolationPolicy),
                 Policy
                 .BulkheadAsync<HttpResponseMessage>(
-                    maxParallelization: throttelingSettings.TeamsConcurrency,
+                    maxParallelization: throttelingSettings.TeamsTeamAndChannelConcurrencyLimit,
                     maxQueuingActions: throttelingSettings.TeamsQueueLength,
                     onBulkheadRejectedAsync: async context =>
-                    {
+                    {                        
                         await Task.CompletedTask;
                     }));
 
@@ -39,6 +40,11 @@ namespace teams_sso_sample.Policies
         public static IAsyncPolicy<HttpResponseMessage> Selector(IReadOnlyPolicyRegistry<string> policyRegistry,
             HttpRequestMessage httpRequestMessage)
         {
+            var pathParts = httpRequestMessage.RequestUri.AbsolutePath.Split('/').Select(p => p.ToLower());
+
+            var isGraphBeta = pathParts.FirstOrDefault() == "beta";
+            var serviceLimitKind = GetServiceLimitKind(pathParts);
+
             if (httpRequestMessage.Method == HttpMethod.Get)
             {
                 var policy = Policy.WrapAsync(
@@ -51,6 +57,14 @@ namespace teams_sso_sample.Policies
             return policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>("SimpleWaitAndRetryPolicy");
         }
 
+        private static GraphApiLimitKind GetServiceLimitKind(IEnumerable<string> pathParts) 
+            => pathParts.Skip(1) switch
+            {
+                var parts when parts.FirstOrDefault() == "teams" => GraphApiLimitKind.TeamsServiceLimit,
+                //var parts when parts.FirstOrDefault() == "me" 
+                //    && parts.Skip(1).FirstOrDefault() == "joinedTeams" => GraphApiLimitKind.TeamsServiceLimit,
 
+                _ => GraphApiLimitKind.Unknown
+            };
     }
 }
