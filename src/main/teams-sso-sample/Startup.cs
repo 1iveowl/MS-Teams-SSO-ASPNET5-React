@@ -1,11 +1,16 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using System;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
+using teams_sso_sample.Client;
+using teams_sso_sample.Options;
+using teams_sso_sample.Policies;
 
 namespace teams_sso_sample
 {
@@ -21,12 +26,33 @@ namespace teams_sso_sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Using Options: https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options?view=aspnetcore-5.0
+            services.Configure<ApiAppOptions>(Configuration.GetSection(ApiAppOptions.ApiAppRegistration));
+            services.Configure<MSGraphOptions>(Configuration.GetSection(MSGraphOptions.MSGraphSettings));
+            services.Configure<ThrottlingOptions>(Configuration.GetSection(ThrottlingOptions.ThrottelingSettings));
+
+            var registry = services
+                .AddPollyPolicyRegistry(Configuration.GetSection(ThrottlingOptions.ThrottelingSettings).Get<ThrottlingOptions>());
+
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApi(Configuration)
-                    .EnableTokenAcquisitionToCallDownstreamApi()
-                        .AddDownstreamWebApi("MSGraphAPI", Configuration.GetSection("MSGraph"))
+                .AddMicrosoftIdentityWebApi(Configuration, ApiAppOptions.ApiAppRegistration)
+                .EnableTokenAcquisitionToCallDownstreamApi()
+                  .AddDownstreamWebApi("MSGraphAPI", Configuration.GetSection(MSGraphOptions.MSGraphSettings))
                   .AddInMemoryTokenCaches();
 
+            services.AddHttpClient<IGraphApiClientFactory, GraphApiClientFactory>()
+                .ConfigureHttpClient((serviceprovider, httpClient) =>
+                {
+                    using var scope = serviceprovider.CreateScope();
+                    var baseUrl = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<MSGraphOptions>>().Value.BaseUrl;
+                    httpClient.BaseAddress = new Uri(baseUrl);
+
+                });
+                //.AddPolicyHandlerFromRegistry(PolicyRepository.Selector);
+
+            services.AddScoped<IGraphRequestHandler, GraphRequestHandler>();
+
+            // For serving SPA TypeScript client.
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "Frontend/Build";
