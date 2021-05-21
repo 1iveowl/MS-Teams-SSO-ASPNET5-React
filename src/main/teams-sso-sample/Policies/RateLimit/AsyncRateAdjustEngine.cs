@@ -1,16 +1,13 @@
 ﻿using Polly;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reactive;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace teams_sso_sample.Policies.RateLimit
 {
-    public class AsyncRateLimitEngine<TResult>
+    public class AsyncRateAdjustEngine<TResult>
     {
         private record ActionItem
         {
@@ -21,27 +18,8 @@ namespace teams_sso_sample.Policies.RateLimit
             internal bool ContinueOnCapturedContext { get; init; }
             internal DateTimeOffset? ScheduledFor { get; init; }
         }
-        private static int _id;
 
-        private readonly static Subject<ActionItem> _actionSubject = new();
-        private readonly static BehaviorSubject<bool> _isThrottlingSubject = new(false);
-
-        private readonly static IObserver<ActionItem> _actionObserver = _actionSubject.AsObserver();
-
-        private readonly static IObservable<ActionItem> _actionObservable = _actionSubject.AsObservable()
-            .Pausable(_isThrottlingObservable, bufferSize: 100)
-            .Publish().RefCount();
-
-        private readonly static IObserver<bool> _isThrottlingObserver = _isThrottlingSubject.AsObserver();
-        private readonly static IObservable<bool> _isThrottlingObservable = _isThrottlingSubject.AsObservable();
-
-        private static IObservable<(bool hasExceeded, DateTimeOffset nextAvailableTime)> HasExceededLimitObservable(int lenght, TimeSpan windowSize) =>
-            _actionObservable.Timestamp()
-                .SlidingWindow(windowSize)
-                .Select(list => (list.Count > lenght, GetNextTimeNotViolatingTheRateLimit(list, windowSize)))
-                .Publish().RefCount();
-
-        public AsyncRateLimitEngine()        {
+        public AsyncRateAdjustEngine()        {
             
         }
 
@@ -50,17 +28,14 @@ namespace teams_sso_sample.Policies.RateLimit
             Context context,
             CancellationToken cancellationToken,
             bool continueOnCapturedContext,
-            int maxLimit,
-            TimeSpan windowSize,
-            int bufferSize,
-            IAsyncRateLimitController<TResult> rateLimitController) =>
-                await rateLimitController.CreateActionObservable(new ActionItem<TResult>
+            IAsyncRateAdjustController<TResult> rateLimitController) =>
+                await rateLimitController.ProcessActionInPipeline(new ActionItem<TResult>
                 {
                     Action = action,
                     Context = context,
                     CancellationToken = cancellationToken,
                     ContinueOnCapturedContext = continueOnCapturedContext                  
-                }).FirstAsync();
+                });
 
 
         //Observable.Create<TResult>(obs =>

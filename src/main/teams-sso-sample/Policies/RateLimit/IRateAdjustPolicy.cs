@@ -6,7 +6,7 @@ namespace teams_sso_sample.Policies.RateLimit
     /// Defines properties common to synchronous and asynchronous ProactiveFoo policies.
     /// </summary>
 
-    public interface IRateLimitPolicy : IsPolicy
+    public interface IRateAdjustPolicy : IsPolicy
     {
         /* Define properties (if any) or methods (if any) you may want to expose on ProactiveFooPolicy.
 
@@ -20,7 +20,7 @@ namespace teams_sso_sample.Policies.RateLimit
     /// <summary>
     /// Defines properties common to generic, synchronous and asynchronous ProactiveFoo policies.
     /// </summary>
-    public interface IRateLimitPolicy<TResult> : IRateLimitPolicy
+    public interface IRateLimitPolicy<TResult> : IRateAdjustPolicy
     {
         /* Define properties (if any) or methods (if any) you may want to expose on ProactiveFooPolicy<TResult>.
 

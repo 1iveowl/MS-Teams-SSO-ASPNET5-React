@@ -6,20 +6,20 @@ namespace Polly
     /// <summary>
     /// Fluent API for defining a Rate Limit policy <see cref="Policy{TResult}"/>. 
     /// </summary>
-    public static class RateLimitTResultSyntax
+    public static class RateAdjustTResultSyntax
     {
-        public static AsyncRateLimitPolicy<TResult> RateLimitPolity<TResult>(
+        public static AsyncRateAdjustPolicy<TResult> RateLimitPolity<TResult>(
             this PolicyBuilder<TResult> policyBuilder,
             int maxLimit, 
             TimeSpan windowSize, 
             int bufferSize)
         {            
-            var rateLimitController = new AsyncRateLimitController<TResult>(
+            var rateLimitController = new AsyncRateAdjustController<TResult>(
                 maxLimit,
                 windowSize,
                 bufferSize);
 
-            return new AsyncRateLimitPolicy<TResult>(
+            return new AsyncRateAdjustPolicy<TResult>(
                 policyBuilder,
                 rateLimitController);
         }
