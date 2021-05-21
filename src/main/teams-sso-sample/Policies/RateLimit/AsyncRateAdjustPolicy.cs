@@ -52,41 +52,41 @@ namespace teams_sso_sample.Policies.RateLimit
     //    }
     //}
 
-    public class AsyncRateLimitPolicy<TResult> : AsyncPolicy<TResult>, IRateLimitPolicy<TResult>
+    public class AsyncRateAdjustPolicy<TResult> : AsyncPolicy<TResult>, IRateLimitPolicy<TResult>
     {
         private readonly int _maxLimit;
         private readonly TimeSpan _windowSize;
         private readonly int _bufferSize;
 
-        private readonly IAsyncRateLimitController<TResult> _rateLimitController;
+        private readonly IAsyncRateAdjustController<TResult> _rateLimitController;
 
         /// <summary>
-        /// Constructs a new instance of <see cref="AsyncRateLimitPolicy{TResult}"/>.
+        /// Constructs a new instance of <see cref="AsyncRateAdjustPolicy{TResult}"/>.
         /// </summary>
         /// <param name="maxLimit">Max rate limit</param>
         /// <param name="windowSize">The time window for the rate limit - e.g. 30 request per second is a window size of one second.</param>
-        /// <returns><see cref="AsyncRateLimitPolicy{TResult}"/></returns>
-        public static AsyncRateLimitPolicy<TResult> Create(
+        /// <returns><see cref="AsyncRateAdjustPolicy{TResult}"/></returns>
+        public static AsyncRateAdjustPolicy<TResult> Create(
             int maxLimit, 
             TimeSpan windowSize, 
             int bufferSize,
-            IAsyncRateLimitController<TResult> rateLimitController)
+            IAsyncRateAdjustController<TResult> rateLimitController)
         {
-            return new AsyncRateLimitPolicy<TResult>(maxLimit, windowSize, bufferSize, rateLimitController);
+            return new AsyncRateAdjustPolicy<TResult>(maxLimit, windowSize, bufferSize, rateLimitController);
         }
 
-        internal AsyncRateLimitPolicy(
+        internal AsyncRateAdjustPolicy(
             PolicyBuilder<TResult> policyBuilder, 
-            IAsyncRateLimitController<TResult> rateLimitController) : base(policyBuilder)
+            IAsyncRateAdjustController<TResult> rateLimitController) : base(policyBuilder)
         {
             _rateLimitController = rateLimitController;
         }
 
-        internal AsyncRateLimitPolicy(
+        internal AsyncRateAdjustPolicy(
             int maxLimit, 
             TimeSpan windowSize, 
             int bufferSize,
-            IAsyncRateLimitController<TResult> rateLimitController)
+            IAsyncRateAdjustController<TResult> rateLimitController)
         {
             _maxLimit = maxLimit;
             _windowSize = windowSize;
@@ -101,7 +101,7 @@ namespace teams_sso_sample.Policies.RateLimit
             CancellationToken cancellationToken,
             bool continueOnCapturedContext)
         {
-            return AsyncRateLimitEngine<TResult>.ImplementationAsync(
+            return AsyncRateAdjustEngine<TResult>.ImplementationAsync(
                 action,
                 context,
                 cancellationToken,

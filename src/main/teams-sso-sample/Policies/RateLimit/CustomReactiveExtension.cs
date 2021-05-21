@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
-using System.Reactive.Disposables;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 
 namespace teams_sso_sample.Policies.RateLimit
 {
@@ -25,45 +24,96 @@ namespace teams_sso_sample.Policies.RateLimit
                         return ll;
                     }).Select(l => l.ToList().AsReadOnly());
 
-        public static IObservable<T> Pausable<T>(this IObservable<T> source,
-            IObservable<bool> pauser,
-            int bufferSize = 0) =>
-                Observable.Create<T>(o =>
+        public static IObservable<T> RateAdjust<T>(
+              this IObservable<T> source,
+              TimeSpan windowSize,
+              int maxLimit,
+              int bufferSize,
+              TimeSpan? padding = default)
+        {
+            return Observable.Create<T>(observer =>
+            {
+                if (padding == default)
                 {
-                    var paused = new SerialDisposable();
+                    padding = windowSize / (maxLimit * 5);
+                }
 
-                    var subscription = source.Publish(ps =>
+                var subscription = source.Publish(ps =>
+                {
+                    LinkedList<DateTimeOffset> linkedTimestampList = default;
+
+                    var i = 0;
+                    var coolDownCounter = 0;
+                    var comingOffOfQueue = false;
+                    var eventLooptScheduler = new EventLoopScheduler();
+
+                    return source
+                        .Timestamp()
+                        .SlidingWindow(windowSize)
+                        .Select(RateEnforce)
+                        .Where(entity => entity != Observable.Empty<T>())
+                        .SelectMany(entity => entity);
+
+                    IObservable<T> RateEnforce(IReadOnlyList<Timestamped<T>> timestampedWindowList)
                     {
-                        var values = bufferSize > 0
-                            ? new ReplaySubject<T>(bufferSize)
-                            : new ReplaySubject<T>();
-
-                        return pauser.StartWith(true)
-                            .DistinctUntilChanged()
-                            .Select(Switcher)
-                            .Switch();
-
-                        IObservable<T> Switcher(bool b)
+                        if (i >= bufferSize)
                         {
-                            if (b)
+                            return Observable.Empty<T>();
+                        }
+
+                        if (timestampedWindowList.Count >= maxLimit || i > 0)
+                        {
+                            i++;
+
+                            if (i == 1)
                             {
-                                values.Dispose();
+                                linkedTimestampList = new LinkedList<DateTimeOffset>(timestampedWindowList.Select(x => x.Timestamp));
+                                linkedTimestampList.RemoveLast();
 
-                                values = bufferSize > 0
-                                    ? new ReplaySubject<T>(bufferSize)
-                                    : new ReplaySubject<T>();
-
-                                paused.Disposable = ps.Subscribe(values);
-
-                                return Observable.Empty<T>();
+                                comingOffOfQueue = true;
                             }
 
-                            return values.Concat(ps);
-                        }
-                    })
-                        .Subscribe(o);
+                            var nextAcceptableExecutionTime = GetNextTimestampHonoringRateLimit();
 
-                    return new CompositeDisposable(subscription, paused);
-                });
+                            linkedTimestampList.AddLast(nextAcceptableExecutionTime.Value);
+                            linkedTimestampList.RemoveFirst();
+
+                            return Observable.Return(timestampedWindowList.ElementAt(timestampedWindowList.Count - 1).Value)
+                                .Delay(nextAcceptableExecutionTime.Value, eventLooptScheduler)
+                                .Do(_ => i--);
+                        }
+                        else
+                        {
+                            if (comingOffOfQueue)
+                            {
+                                coolDownCounter = 3;
+                                comingOffOfQueue = false;
+                            }
+
+                            if (coolDownCounter > 0)
+                            {
+                                return Observable.Return(timestampedWindowList.ElementAt(timestampedWindowList.Count - 1).Value)
+                                .Delay((windowSize / maxLimit), eventLooptScheduler)
+                                .Do(x => coolDownCounter--);
+                            }
+
+                            return Observable.Return(timestampedWindowList.ElementAt(timestampedWindowList.Count - 1).Value);
+                        }
+                    }
+
+                    DateTimeOffset? GetNextTimestampHonoringRateLimit()
+                    {
+                        var lastActionInWindow = linkedTimestampList.Last();
+                        var firstActionInWindow = linkedTimestampList.First();
+                        var timeUntilLimitNotExceeded = windowSize - (lastActionInWindow - firstActionInWindow);
+
+                        return lastActionInWindow + timeUntilLimitNotExceeded + padding;
+                    }
+                })
+                .Subscribe(observer);
+
+                return subscription;
+            });
+        }
     }
 }
